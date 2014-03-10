@@ -396,6 +396,8 @@ getDataFromJSON <- function(){
 
 df.melt <- getDataFromJSON()
 
+
+#original chart
 d1 <- dPlot(
   x = "Share", 
   y = "State", 
@@ -419,10 +421,15 @@ d1
 require(XML)
 #get States and Census data
 #had hoped for a more elegant way of getting
+#than this tangled mess to read a Census html list
 statesCensus <- readHTMLList(
   "http://www.census.gov/econ/census07/www/geography/regions_and_divisions.html"
 )[17:20]
 splitUp <- strsplit(statesCensus[[1]],"([\n:,])")
+#here my regex weakness shows; also need split on and
+splitUp <- lapply(splitUp,function(x){
+  unlist(strsplit(x,"\\b and \\b"))
+})
 
 options(stringsAsFactors=F)
 statesRegions <- do.call(rbind,lapply(
@@ -446,8 +453,8 @@ statesRegions <- do.call(rbind,lapply(
     )
     states = splitUp[[n]][-c(regionloc,divisionloc)]
     data.frame(
-      region = rep(splitUp[[n]][regionloc],length(states)),
-      division = unlist(lapply(
+      Region = rep(splitUp[[n]][regionloc],length(states)),
+      Division = unlist(lapply(
         1:length(divisionloc),
         function(x){
           rep(
@@ -456,7 +463,59 @@ statesRegions <- do.call(rbind,lapply(
           )
         }
       )),
-      state = states
+      State = gsub(states,pattern="^\\s+",replacement="") #remove leading space
     )
   }
 ))
+
+require(dplyr)
+
+#use dplyr handy join to combine our new region data
+#with prior df.melt data
+dataPlot <- left_join(df.melt,statesRegions)
+
+#now one other tiny issue is that with dimple
+#handling colors with facets will be better handled
+require(plyr)
+dataPlot <- ddply(
+  dataPlot
+  ,.(Division,Region,State,Ancestry)
+  ,transform
+  ,Share
+)
+
+d2 <- dPlot(
+  Share ~ State,
+  data = dataPlot,
+  groups = c("Ancestry"),
+  type = "bar"
+  ,margins = list(left=60,top=20,right=20,bottom=20)  
+)
+d2$yAxis(type = "addPctAxis")
+d2$params$facet = list(x = "Region", y = NULL)
+d2$addControls(
+  "x",
+  value = d2$params$x,
+  values = colnames(dataPlot[-3])
+)
+d2$addControls(
+  "groups",
+  value = d2$params$groups,
+  values = colnames(dataPlot[-3])
+)
+d2$addControls(
+  "facetx",
+  value = "Region",
+  values = colnames(dataPlot[-3])
+)
+d2$addFilters("Ancestry")
+
+d2$params$defaultColors = "#!d3.scale.category10()!#"
+d2$templates$script = 
+  "../rCharts_dimple/chart_multiselect.html"
+  #"http://timelyportfolio.github.io/rCharts_dimple/chart_multiselect.html"
+d2
+
+
+d2$params$facet = list( x = NULL, y = NULL, removeAxes = TRUE)
+d2
