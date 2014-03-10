@@ -493,6 +493,20 @@ d2 <- dPlot(
 )
 d2$yAxis(type = "addPctAxis")
 d2$params$facet = list(x = "Region", y = NULL)
+d2$templates$script = 
+  #"../rCharts_dimple/chart_multiselect.html"
+  "http://timelyportfolio.github.io/rCharts_dimple/chart_multiselect.html"
+#use d3 color scale
+d2$params$defaultColors = "#!d3.scale.category10()!#"
+#if you wanted to specify colors for each value
+#d2$params$defaultColors = sprintf(
+#  "#!d3.scale.category10().range(JSON.parse('%s')).domain(JSON.parse('%s'))!#"
+#  ,toJSON(RColorBrewer::brewer.pal(n=9,"BuPu"))
+#  ,toJSON(unique(dataPlot$Ancestry))
+#)
+d2
+
+#now add some Angular goodness
 d2$addControls(
   "x",
   value = d2$params$x,
@@ -509,11 +523,6 @@ d2$addControls(
   values = colnames(dataPlot[-3])
 )
 d2$addFilters("Ancestry")
-
-d2$params$defaultColors = "#!d3.scale.category10()!#"
-d2$templates$script = 
-  "../rCharts_dimple/chart_multiselect.html"
-  #"http://timelyportfolio.github.io/rCharts_dimple/chart_multiselect.html"
 d2
 
 
